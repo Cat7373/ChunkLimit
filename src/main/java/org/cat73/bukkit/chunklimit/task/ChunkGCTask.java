@@ -49,17 +49,15 @@ public class ChunkGCTask implements Runnable {
                     .collect(Collectors.toList());
 
             // 出生点区域
-            {
-                if (w.getKeepSpawnInMemory()) {
-                    Location location = w.getSpawnLocation();
-                    Chunk chunk = location.getChunk();
+            if (w.getKeepSpawnInMemory()) {
+                Location location = w.getSpawnLocation();
+                Chunk chunk = location.getChunk();
 
-                    int minX = chunk.getX() - 9;
-                    int maxX = chunk.getX() + 9;
-                    int minZ = chunk.getZ() - 9;
-                    int maxZ = chunk.getZ() + 9;
-                    allowChunkRange.add(new AABBBox(minX, minZ, maxX, maxZ));
-                }
+                int minX = chunk.getX() - 9;
+                int maxX = chunk.getX() + 9;
+                int minZ = chunk.getZ() - 9;
+                int maxZ = chunk.getZ() + 9;
+                allowChunkRange.add(new AABBBox(minX, minZ, maxX, maxZ));
             }
 
             // 遍历区块
@@ -75,10 +73,13 @@ public class ChunkGCTask implements Runnable {
                 return 0;
             }).reduce(0, (a, b) -> a + b);
 
+            // 调试信息
             return String.format("%s: %d, ", w.getName(), unloadCount);
         })
+        // 调试信息
         .reduce("[debug] Unload Chunks --> ", (a, b) -> a + b);
 
+        // 输出调试信息
         this.logger.log(Level.INFO, logStr);
     }
 }
