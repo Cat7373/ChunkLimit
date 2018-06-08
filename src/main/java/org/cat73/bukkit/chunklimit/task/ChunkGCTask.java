@@ -31,11 +31,11 @@ public class ChunkGCTask implements Runnable {
 
     @Override
     public void run() {
+        // 服务器的视距
+        int viewDistance = this.server.getViewDistance();
         // 遍历世界
         String logStr = this.server.getWorlds().stream().map(w -> {
-            // 当前世界的视距
-            int viewDistance = this.server.getViewDistance();
-            // 合理的区块区域范围
+            // 合理的区块区域范围(玩家视距+1 内的区块)
             List<AABBBox> allowChunkRange = w.getPlayers().stream()
                     .map(p -> {
                         Location location = p.getLocation();
@@ -50,19 +50,21 @@ public class ChunkGCTask implements Runnable {
 
             // 出生点区域
             {
-                Location location = w.getSpawnLocation();
-                Chunk chunk = location.getChunk();
+                if (w.getKeepSpawnInMemory()) {
+                    Location location = w.getSpawnLocation();
+                    Chunk chunk = location.getChunk();
 
-                int minX = chunk.getX() - 12;
-                int maxX = chunk.getX() + 12;
-                int minZ = chunk.getZ() - 12;
-                int maxZ = chunk.getZ() + 12;
-                allowChunkRange.add(new AABBBox(minX, minZ, maxX, maxZ));
+                    int minX = chunk.getX() - 9;
+                    int maxX = chunk.getX() + 9;
+                    int minZ = chunk.getZ() - 9;
+                    int maxZ = chunk.getZ() + 9;
+                    allowChunkRange.add(new AABBBox(minX, minZ, maxX, maxZ));
+                }
             }
 
             // 遍历区块
             int unloadCount = Stream.of(w.getLoadedChunks()).map(c -> {
-                // 如果区块被加载且不再合理区域内
+                // 如果区块被加载且不在合理区域内
                 if (c.isLoaded() && allowChunkRange.stream().noneMatch(b -> b.contains(c.getX(), c.getZ()))) {
                     // 卸载区块
                     if (c.unload()) {
