@@ -3,7 +3,7 @@ package org.cat73.bukkit.chunklimit.task;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Server;
-import org.cat73.bukkit.chunklimit.bean.AABBBox;
+import org.cat73.bukkit.chunklimit.bean.ChunkRange;
 
 import java.util.List;
 import java.util.logging.Level;
@@ -36,7 +36,7 @@ public class ChunkGCTask implements Runnable {
         // 遍历世界
         String logStr = this.server.getWorlds().stream().map(w -> {
             // 合理的区块区域范围(玩家视距+1 内的区块)
-            List<AABBBox> allowChunkRange = w.getPlayers().stream()
+            List<ChunkRange> allowChunkRange = w.getPlayers().stream()
                     .map(p -> {
                         Location location = p.getLocation();
                         Chunk chunk = location.getChunk();
@@ -44,7 +44,7 @@ public class ChunkGCTask implements Runnable {
                         int maxX = chunk.getX() + viewDistance + 1;
                         int minZ = chunk.getZ() - viewDistance - 1;
                         int maxZ = chunk.getZ() + viewDistance + 1;
-                        return new AABBBox(minX, minZ, maxX, maxZ);
+                        return new ChunkRange(minX, minZ, maxX, maxZ);
                     })
                     .collect(Collectors.toList());
 
@@ -57,21 +57,17 @@ public class ChunkGCTask implements Runnable {
                 int maxX = chunk.getX() + 9;
                 int minZ = chunk.getZ() - 9;
                 int maxZ = chunk.getZ() + 9;
-                allowChunkRange.add(new AABBBox(minX, minZ, maxX, maxZ));
+                allowChunkRange.add(new ChunkRange(minX, minZ, maxX, maxZ));
             }
 
             // 遍历区块
-            int unloadCount = Stream.of(w.getLoadedChunks()).map(c -> {
-                // 如果区块被加载且不在合理区域内
-                if (c.isLoaded() && allowChunkRange.stream().noneMatch(b -> b.contains(c.getX(), c.getZ()))) {
+            int unloadCount = Stream.of(w.getLoadedChunks())
+                    // 如果区块被加载且不在合理区域内
+                    .filter(c -> c.isLoaded() && allowChunkRange.stream().noneMatch(b -> b.contains(c.getX(), c.getZ())))
                     // 卸载区块
-                    if (c.unload()) {
-                        return 1;
-                    }
-                }
-
-                return 0;
-            }).reduce(0, (a, b) -> a + b);
+                    .map(c -> c.unload() ? 1 : 0)
+                    // 统计成功数
+                    .reduce(0, (a, b) -> a + b);
 
             // 调试信息
             return String.format("%s: %d, ", w.getName(), unloadCount);
