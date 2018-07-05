@@ -1,3 +1,6 @@
 name: ChunkLimit
 main: org.cat73.bukkit.chunklimit.ChunkLimit
 version: 1.0.0
+commands:
+  chunklimit:
+    usage: /<command> help
